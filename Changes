@@ -1,5 +1,10 @@
 Revision history for Perl extension Business::AU::ABN
 
+0.3  Thu Dec 25 2003
+	- Changed a lot of the way that objects work and are used
+	- Added an error message whenever an ABN validation fails
+	- Santa leased me an office! Yay!
+
 0.2  Thu Dec 25 2003
 	- Errr... we actually allow you to import validate this time
 

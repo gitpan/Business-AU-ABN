@@ -1,6 +1,11 @@
 package Business::AU::ABN;
 
+# Implements algorithm for validating ABNs, detailed by the ATO at
+# http://www.ato.gov.au/content/downloads/nat2956.pdf
+
 # See POD at the end of the file
+
+### Memory Overhead: 52K
 
 use strict;
 use UNIVERSAL 'isa';
@@ -8,13 +13,14 @@ use base 'Exporter';
 use List::Util ();
 use overload '""' => 'to_string';
 
-use vars qw{$VERSION @EXPORT_OK @_WEIGHT};
+use vars qw{$VERSION @EXPORT_OK $errstr @_WEIGHT};
 BEGIN {
-	$VERSION = "0.2";
-	require Exporter;
-	@EXPORT_OK = 'validate';
+	$VERSION = "0.3";
+	@EXPORT_OK = 'validate_abn';
+	$errstr = '';
 
-	# The set of digit weightings
+	# The set of digit weightings, taken
+	# directly from the documentation.
 	@_WEIGHT = (10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19);
 }
 
@@ -22,97 +28,83 @@ BEGIN {
 
 
 
-
 sub new {
-	my $class = shift;
+	my $class = ref $_[0] || $_[0];
 
-	# Make sure the argument is a normal string
-	# with at least one non-whitespace character.
-	$class->_string($_[0]) or return undef;
+	# Validate the string to create the object for
+	my $validated = $class->_validate_abn($_[1]) or return '';
 
-	bless \(my $tmp = shift), $class;
+	# Create the object
+	bless \$validated, $class;
 }
 
-# The validate method acts as a wrapper for the various call
-# forms around the true method _validate.
-sub validate {
-	my $self = isa( ref $_[0], 'Business::AU::ABN' )
-		? shift                             # Object method
-		: isa( $_[0], 'Business::AU::ABN' )
-			? shift->new( @_ )          # Static method
-			: __PACKAGE__->new( @_ )    # Function call
-		or return '';
-	$self->_validate ? "$self" : '';
+# The validate_abn method acts as a wrapper for the various call
+# forms around the true method _validate_abn.
+sub validate_abn {
+	isa( $_[0], 'Business::AU::ABN' )
+		? ref $_[0]
+			? shift->to_string            # Object method
+			: shift->_validate_abn(shift) # Class method
+		: __PACKAGE__->_validate_abn(shift);  # Function call
 }
 
-# Do the ACTUAL check, called in object method context only.
-# Implements algorithm for validating ABNs provided by the ATO at
-# http://www.ato.gov.au/content/downloads/nat2956.pdf
+# Do the ACTUAL check, called in class method context only.
 # I've tried to keep the code here very very simple, which takes a 
 # little more memory, but is much more obvious in function.
 # Returns true if correct, false if not, or undef on error.
-sub _validate {
-	my $self = isa( ref $_[0], 'Business::AU::ABN' ) ? shift : return undef;
+sub _validate_abn {
+	my $class = shift;
+
+	# Reset the error string	
+	$errstr = '';
+
+	# Make sure we at least have a string to check
+	my $abn = $class->_string($_[0]) ? shift 
+		: return $class->_error( 'No value provided to check' );
 
 	# Check we have only whitespace and digits
-	if ( $$self =~ /[^\s\d]/ ) {
-		return ''; # "ABN contains invalid characters"
+	if ( $abn =~ /[^\s\d]/ ) {
+		return $class->_error( 'ABN contains invalid characters' );
 	}
 
-	# Strip off leading and trailing whitespace
-	$$self =~ s/^\s+//;
-	$$self =~ s/\s+$//;
-
-	# Do any further checks on a copy, so we don't over-alter
-	# their value on success.
-	my $abn = $$self;
-
-	# Remove all remaining whitespace
+	# Remove all whitespace
 	$abn =~ s/\s+//gs;
 
 	# Initial validation is based on the number of digits.
-	### A "Group ABN" exists with 14 digits. We will add support for this later.
+	### A "Group ABN" exists with 14 digits. 
+	### We will add support for this later.
 	unless ( length $abn == 11 ) {
-		return ''; # "ABNs are 11 digits, not" . length $abn
+		return $class->_error( "ABNs are 11 digits, not " . length $abn );
 	}
-
-	# Since it is the correct length, update the object with the
-	# correct layout of the digits. From this point on, we won't
-	# need to modify the value.
-	$$self = $abn;
-	$$self =~ s/^(\d\d)(\d\d\d)(\d\d\d)(\d\d\d)$/$1 $2 $3 $4/ or die "panic!";
 
 	# Split the 11 digit ABN into an 11 element array
-	my @digits = split /(?<=\d)(?=\d)/, $abn;
+	my @digits = $abn =~ /\d/g;
 
-	# Algorithm Step 1
-	# "Subtract 1 from the first ( left ) digit to give a new 11 digit number"
+	# Quotes are directly from the algorithm documentation
+	# "Step 1. Subtract 1 from the first ( left ) digit to give a new 11 digit number"
 	$digits[0] -= 1;
 
-	# Algorithm Step 2
-	# "Multiply each of the digits in this new number by its weighting factor"
-	my @products = map { $digits[$_] * $_WEIGHT[$_] } (0 .. 10);
+	# "Step 2. Multiply each of the digits in this new number by its weighting factor"
+	@digits = map { $digits[$_] * $_WEIGHT[$_] } (0 .. 10);
 
-	# Algorithm Step 3
-	# "Sum the resulting 11 products"
-	my $sum = List::Util::sum( @products );
-
-	# Algorithm Step 4
-	# "Divide the total by 89, noting the remainder"
-	my $remainder = $sum % 89;
-
-	# Algorithm Step 5
-	# "If the remainder is zero the number is valid"
-	unless ( $remainder == 0 ) {
-		return ''; # Incorrect ABN, fails checksum
+	# "Step 3. Sum the resulting 11 products"
+	# "Step 4. Divide the total by 89, noting the remainder"
+	# "Step 5. If the remainder is zero the number is valid"
+	# We find the modulus, which does 4 and 5 in one go.
+	if ( List::Util::sum(@digits) % 89 ) {
+		return $class->_error( 'ABN looks correct, but fails checksum' );
 	}
 
-	# The number is valid
-	return 1;
+	# Format and return
+	$abn =~ s/^(\d{2})(\d{3})(\d{3})(\d{3})$/$1 $2 $3 $4/ or die "panic!";
+	$abn;
 }
 
 # Get the ABN as a string
 sub to_string { ${$_[0]} }
+
+# Get the error message when validation returns false.
+sub errstr { $errstr }
 
 
 
@@ -123,8 +115,11 @@ sub to_string { ${$_[0]} }
 
 # Is a value a normal string of at least one non-whitespace character
 sub _string {
-	my ($class, $string) = @_;
-	!! (defined $string and ! ref $string and length $string and $string =~ /\S/);
+	!! (defined $_[1] and ! ref $_[1] and length $_[1] and $_[1] =~ /\S/);
+}
+sub _error {
+	$errstr = $_[1] ? "$_[1]" : 'Unknown error while validating ABN';
+	return ''; # False
 }
 
 1;
@@ -135,26 +130,23 @@ __END__
 
 =head1 NAME
 
-Business::AU::ABN - Format and validate ABNs ( Australian Business Number )
+Business::AU::ABN - Validate and format Australian Business Numbers
 
 =head1 SYNOPSIS
 
-  # Create a new ABN object
+  # Create a new validated ABN object
   use Business::AU::ABN;
   my $ABN = new Business::AU::ABN( '12 004 044 937' );
   
-  # Validate the ABN
-  $ABN->validate;
-  
   # Validate in a single method call
-  Business::AU::ABN->validate( '12 004 044 937' );
+  Business::AU::ABN->validate_abn( '12 004 044 937' );
   
   # Validate in a single function call
-  Business::AU::ABN::validate( '12 004 044 937' );
+  Business::AU::ABN::validate_abn( '12 004 044 937' );
   
-  # The validate function is also importable
-  use Business::AU:ABN 'validate';
-  validate( '12 004 044 937' );
+  # The validate_abn function is also importable
+  use Business::AU:ABN 'validate_abn';
+  validate_abn( '12 004 044 937' );
 
 =head1 DESCRIPTION
 
@@ -165,12 +157,12 @@ provide a central, universal, and unique identifier for all businesses.
 It's also rather neat, in that it is capable of self-validating. Much like
 a credit card number does, a simple algorithm applied to the digits can
 confirm that the number is valid. ( Although the business may not actually 
-exist ). The checksum algorithm is specifically designed to catch situations
-in which you get two digits the wrong way around, or worse.
+exist ). The checksum algorithm was specifically designed to catch situations
+in which you get two digits the wrong way around, or something of that nature.
 
-Business::AU::ABN implements an object form of an ABN number. It has the 
-ability to validate, and automatically reformates the number into the common
-and most prefered format, '01 234 567 890'.
+Business::AU::ABN provides a validation/formatting mechanism, and an object
+form of an ABN number. ABNs are reformatted into the most preferred format,
+'01 234 567 890'.
 
 The object itself automatically stringifies to the it's formatted number, so
 you can do things like C<print "Your ABN $ABN looks OK"> and other things of
@@ -181,59 +173,57 @@ that nature.
 Apart from the algorithm itself, most of this module is aimed at making the
 validation mechanism as flexible and easy to use as possible.
 
-With this in mind, the C<validate> sub can be accessed in ANY form, and will
+With this in mind, the C<validate_abn> sub can be accessed in ANY form, and will
 just "do what you mean". See the method details for more information.
+
+Also, all validation will take just about any crap as an argument, and not die
+or throw a warning. It will just return false.
 
 =head1 METHODS
 
 =head2 new $string
 
-The C<new> method creates a new C<Business::AU::ABN> object. It expects as
-argument a defined string containing at least one non-whitespace character,
-or it will immediately return C<undef>.
+The C<new> method creates a new C<Business::AU::ABN> object. Takes as argument
+a value, and validates that it is correct before creating the object. As such
+if an object is provided that passes C<$ABN-E<gt>isa('Business::AU::ABN')>,
+it IS a valid ABN and does not need to be checked.
 
-The method does not reformat or check the string provided in any way.
+Returns a new C<Business::AU::ABN> on success, or sets the error string and
+returns false if the string is not an ABN.
 
-=head2 to_string
+=head2 $ABN-E<gt>validate_abn
 
-The C<to_string> method returns the ABN as a string. This is the method called
-by the stringification overload. Providing that the ABN has been validated,
-this method will return the ABN in the correct '01 234 567 890' format.
+When called as a method on an object, C<validate_abn> isn't really that useful,
+as ABN objects are already assumed to be correct, but the method is included
+for completeness sake.
 
-=head2 $ABN-E<gt>validate
+Returns the correctly formatted ABN (which is also 'true' in boolean context)
+if the ABN is valid, or false if not.
 
-When called as a method on an object, C<validate> does a number of simple 
-format checks on the string originally provided, cleaning up and reformatting
-whitespace as needed. It then runs a checksum validation on the value.
+=head2 Business::AU::ABN->validate_abn $string
 
-Returns true if the ABN is valid, or false if not
-
-=head2 Business::AU::ABN->validate $string
-
-When called as a static method, C<validate> takes a string as an argument and
-attempts to validate it. When called in this form, the method is a little more
-flexible, and should tolerate just about any crap as an argument, returning 
-false.
+When called as a static method, C<validate_abn> takes a string as an argument and
+attempts to validate it as an ABN.
 
 Returns the correctly formatted ABN (which is also 'true' in boolean context)
 if the ABN is valid. Returns false otherwise.
 
-=head2 Business::AU::ABN::validate $string
+=head2 Business::AU::ABN::validate_abn $string
 
-When called directly as a fully referenced function, C<validate> responds in
+When called directly as a fully referenced function, C<validate_abn> responds in
 exactly the same was as for the static method above.
 
 Returns the correctly formatted ABN (which is also 'true' in boolean context)
 if the ABN is valid. Returns false otherwise.
 
-=head2 validate $string
+=head2 validate_abn $string
 
-The C<validate> function can also be imported to your package and used
+The C<validate_abn> function can also be imported to your package and used
 directly, as in the following example.
 
-  use Business::AU::ABN 'validate';
+  use Business::AU::ABN 'validate_abn';
   my $abn = '01 234 567 890';
-  print "Your ABN is " . validate($abn) ? 'valid' : 'invalid';
+  print "Your ABN is " . validate_abn($abn) ? 'valid' : 'invalid';
 
 The imported function reponds identically to the fully referenced function
 and the static method.
@@ -241,9 +231,29 @@ and the static method.
 Returns the correctly formatted ABN (which is also 'true' in boolean context)
 if the ABN is valid. Returns false otherwise.
 
+=head2 to_string
+
+The C<to_string> method returns the ABN as a string. 
+This is also the method called by the stringification overload.
+
+=head2 errstr
+
+When C<validate_abn> or C<new> return false, a message describing the problem
+can be accessed via any of the following.
+
+  # Global variable
+  $Business::AU::ABN::errstr
+  
+  # Class method
+  Business::AU::ABN->errstr
+  
+  # Function
+  Business::AU::ABN::errstr()
+
 =head1 TO DO
 
-Add the method C<acn> to derive the older Australian Company Number
+Add the method C<ACN> to get the older Australian Company Number from the
+ABN, which is a superset of it.
 
 =head1 SUPPORT
 
