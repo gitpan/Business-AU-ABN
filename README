@@ -13,7 +13,7 @@ SYNOPSIS
       Business::AU::ABN::validate_abn( '12 004 044 937' );
   
       # The validate_abn function is also importable
-      use Business::AU:ABN 'validate_abn';
+      use Business::AU::ABN 'validate_abn';
       validate_abn( '12 004 044 937' );
 
 DESCRIPTION
@@ -47,6 +47,17 @@ DESCRIPTION
 
     Also, all validation will take just about any crap as an argument, and
     not die or throw a warning. It will just return false.
+
+  "Group" ABNs as yet unsupported
+    For some bizarre reason I've not yet managed to work out, there exists a
+    SECOND type of ABN not documented in the ATO mod 89 document, known as a
+    "group" ABN, and designed for one member of a group of companies.
+    Frankly, I only found out this exists because my accountany has one, and
+    I couldn't put the number into Quick Books.
+
+    The Group ABN has an additional 3 numbers ( at the end I believe ). I
+    have no idea how to validate it, and if anyone knows more, drop me an
+    email at the address provided below.
 
 METHODS
   new $string

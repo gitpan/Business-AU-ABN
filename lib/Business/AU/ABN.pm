@@ -15,7 +15,7 @@ use overload '""' => 'to_string';
 
 use vars qw{$VERSION @EXPORT_OK $errstr @_WEIGHT};
 BEGIN {
-	$VERSION = "0.3";
+	$VERSION = "0.4";
 	@EXPORT_OK = 'validate_abn';
 	$errstr = '';
 
@@ -34,7 +34,6 @@ sub new {
 	# Validate the string to create the object for
 	my $validated = $class->_validate_abn($_[1]) or return '';
 
-	# Create the object
 	bless \$validated, $class;
 }
 
@@ -53,22 +52,16 @@ sub validate_abn {
 # little more memory, but is much more obvious in function.
 # Returns true if correct, false if not, or undef on error.
 sub _validate_abn {
-	my $class = shift;
-
-	# Reset the error string	
+	my $class = shift;	
 	$errstr = '';
 
 	# Make sure we at least have a string to check
 	my $abn = $class->_string($_[0]) ? shift 
 		: return $class->_error( 'No value provided to check' );
 
-	# Check we have only whitespace and digits
-	if ( $abn =~ /[^\s\d]/ ) {
-		return $class->_error( 'ABN contains invalid characters' );
-	}
-
-	# Remove all whitespace
+	# Check we have only whitespace ( which we remove ) and digits
 	$abn =~ s/\s+//gs;
+	return $class->_error( 'ABN contains invalid characters' ) if $abn =~ /\D/;
 
 	# Initial validation is based on the number of digits.
 	### A "Group ABN" exists with 14 digits. 
@@ -145,7 +138,7 @@ Business::AU::ABN - Validate and format Australian Business Numbers
   Business::AU::ABN::validate_abn( '12 004 044 937' );
   
   # The validate_abn function is also importable
-  use Business::AU:ABN 'validate_abn';
+  use Business::AU::ABN 'validate_abn';
   validate_abn( '12 004 044 937' );
 
 =head1 DESCRIPTION
@@ -178,6 +171,18 @@ just "do what you mean". See the method details for more information.
 
 Also, all validation will take just about any crap as an argument, and not die
 or throw a warning. It will just return false.
+
+=head2 "Group" ABNs as yet unsupported
+
+For some bizarre reason I've not yet managed to work out, there exists a
+SECOND type of ABN not documented in the ATO mod 89 document, known as a
+"group" ABN, and designed for one member of a group of companies. Frankly, I
+only found out this exists because my accountany has one, and I couldn't put
+the number into Quick Books.
+
+The Group ABN has an additional 3 numbers ( at the end I believe ). I have no
+idea how to validate it, and if anyone knows more, drop me an email at the 
+address provided below.
 
 =head1 METHODS
 

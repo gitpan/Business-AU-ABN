@@ -1,5 +1,8 @@
 Revision history for Perl extension Business::AU::ABN
 
+0.4  Wed Jan  7 2004
+	- Fixed some documentation bugs, and made some other minor tweaks
+
 0.3  Thu Dec 25 2003
 	- Changed a lot of the way that objects work and are used
 	- Added an error message whenever an ABN validation fails
