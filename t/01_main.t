@@ -7,7 +7,7 @@ use File::Spec::Functions qw{:ALL};
 use lib catdir( updir(), updir(), 'modules' ), # Development testing
         catdir( updir(), 'lib' );              # Installation testing
 use UNIVERSAL 'isa';
-use Test::More tests => 38;
+use Test::More tests => 49;
 
 # Check their perl version
 BEGIN {
@@ -21,6 +21,9 @@ BEGIN {
 
 # Does the module load
 use_ok( 'Business::AU::ABN' );
+eval "use Business::AU::ABN 'validate';";
+ok( ! $@, 'No error when importing' );
+
 
 
 
@@ -68,7 +71,10 @@ sub check_validation {
 	my $message = defined $result ? "'$result'" : 'undef';
 
 	# Check the full function form
-	is( Business::AU::ABN::validate( $value ), $result, "Function     : $message" );
+	is( Business::AU::ABN::validate( $value ), $result, "Full Function: $message" );
+
+	# Check the imported function form
+	is( validate( $value ), $result,                      "Imported Func: $message" );
 
 	# Check the static method form
 	is( Business::AU::ABN->validate( $value ), $result, "Static method: $message" );

@@ -1,5 +1,8 @@
 Revision history for Perl extension Business::AU::ABN
 
+0.2  Thu Dec 25 2003
+	- Errr... we actually allow you to import validate this time
+
 0.1  Thu Dec 25 2003
 	- original version
 	- Merry Christmas!

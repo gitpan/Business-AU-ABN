@@ -4,12 +4,15 @@ package Business::AU::ABN;
 
 use strict;
 use UNIVERSAL 'isa';
+use base 'Exporter';
 use List::Util ();
 use overload '""' => 'to_string';
 
-use vars qw{$VERSION @_WEIGHT};
+use vars qw{$VERSION @EXPORT_OK @_WEIGHT};
 BEGIN {
-	$VERSION = "0.1";
+	$VERSION = "0.2";
+	require Exporter;
+	@EXPORT_OK = 'validate';
 
 	# The set of digit weightings
 	@_WEIGHT = (10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19);
