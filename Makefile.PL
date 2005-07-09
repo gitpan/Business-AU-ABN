@@ -6,12 +6,12 @@ WriteMakefile(
 	'PREREQ_PM'    => {
 		List::Util => 1.11,
 
-		# For the tests
-		File::Spec => 0.83,
+		# Modules needed for tests
+		File::Spec => 0.80,
 		Test::More => 0,
 	},
 	($] >= 5.005) ? (
-		'AUTHOR'   => 'Adam Kennedy (cpan@ali.as)',
+		'AUTHOR'   => 'Adam Kennedy <cpan@ali.as>',
 		'ABSTRACT' => 'Format and validate ABNs ( Australian Business Number )',
 	) : (),
 );

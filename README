@@ -29,12 +29,12 @@ DESCRIPTION
     catch situations in which you get two digits the wrong way around, or
     something of that nature.
 
-    Business::AU::ABN provides a validation/formatting mechanism, and an
+    "Business::AU::ABN" provides a validation/formatting mechanism, and an
     object form of an ABN number. ABNs are reformatted into the most
     preferred format, '01 234 567 890'.
 
-    The object itself automatically stringifies to the it's formatted
-    number, so you can do things like "print "Your ABN $ABN looks OK"" and
+    The object itself automatically stringifies to the formatted number, so
+    with an object, you can safely do "print "Your ABN $ABN looks OK"" and
     other things of that nature.
 
   Highly flexible validation
@@ -48,16 +48,22 @@ DESCRIPTION
     Also, all validation will take just about any crap as an argument, and
     not die or throw a warning. It will just return false.
 
-  "Group" ABNs as yet unsupported
-    For some bizarre reason I've not yet managed to work out, there exists a
-    SECOND type of ABN not documented in the ATO mod 89 document, known as a
-    "group" ABN, and designed for one member of a group of companies.
-    Frankly, I only found out this exists because my accountany has one, and
-    I couldn't put the number into Quick Books.
+  "Group" ABNs
+    The ABN supports the concept of "Groups", that is, a group of companies
+    sharing a common ABN, but being seperated within it. In fact, ALL
+    companies that have a regular 11 digit ABN are actually also allocated a
+    group number. This group number is a 3 digit number, and are allocated
+    incrementally, starting with 001. So the ABN '01 234 567 890' is
+    actually also capable of being represented as '01 234 567 890 001'.
 
-    The Group ABN has an additional 3 numbers ( at the end I believe ). I
-    have no idea how to validate it, and if anyone knows more, drop me an
-    email at the address provided below.
+    By convention, when only a single company exists, the 001 is dropped.
+    However, in common situations where an ABN value is expected, you accept
+    both the 11 digit regular version, and the 14 digit group version. The
+    14 digit case will also be reformatted to show the group identifier as
+    an additional 3 digits group.
+
+    Except for not allowing 000, there are no restrictions, and group
+    identifiers are not included in the checksum calculation.
 
 METHODS
   new $string
@@ -130,19 +136,18 @@ TO DO
 SUPPORT
     Bugs should be reported via the CPAN bug tracker at
 
-      http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Business%3A%3AAU%3A%3AABN
+    <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Business-AU-ABN>
 
-    For other issues, contact the author
+    For other issues, or commercial enhancement or support, contact the
+    author.
 
 AUTHORS
-            Adam Kennedy ( maintainer )
-            cpan@ali.as
-            http://ali.as/
+    Adam Kennedy (Maintainer), <http://ali.as/>, cpan@ali.as
 
 COPYRIGHT
-    Copyright (c) 2003-2004 Adam Kennedy. All rights reserved. This program
-    is free software; you can redistribute it and/or modify it under the
-    same terms as Perl itself.
+    Copyright (c) 2003 - 2005 Adam Kennedy. All rights reserved. This
+    program is free software; you can redistribute it and/or modify it under
+    the same terms as Perl itself.
 
     The full text of the license can be found in the LICENSE file included
     with this module.

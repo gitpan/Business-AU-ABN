@@ -11,17 +11,17 @@ use strict;
 use UNIVERSAL 'isa';
 use base 'Exporter';
 use List::Util ();
-use overload '""' => 'to_string';
+use overload '""'   => 'to_string',
+             'bool' => sub () { 1 };
 
-use vars qw{$VERSION @EXPORT_OK $errstr @_WEIGHT};
+# The set of digit weightings, taken from the documentation.
+use constant WEIGHT => qw{10 1 3 5 7 9 11 13 15 17 19};
+
+use vars qw{$VERSION @EXPORT_OK $errstr};
 BEGIN {
-	$VERSION = "0.4";
+	$VERSION   = '1.05';
 	@EXPORT_OK = 'validate_abn';
-	$errstr = '';
-
-	# The set of digit weightings, taken
-	# directly from the documentation.
-	@_WEIGHT = (10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19);
+	$errstr    = '';
 }
 
 
@@ -56,7 +56,7 @@ sub _validate_abn {
 	$errstr = '';
 
 	# Make sure we at least have a string to check
-	my $abn = $class->_string($_[0]) ? shift 
+	my $abn = $class->_string($_[0]) ? shift
 		: return $class->_error( 'No value provided to check' );
 
 	# Check we have only whitespace ( which we remove ) and digits
@@ -64,10 +64,19 @@ sub _validate_abn {
 	return $class->_error( 'ABN contains invalid characters' ) if $abn =~ /\D/;
 
 	# Initial validation is based on the number of digits.
-	### A "Group ABN" exists with 14 digits. 
-	### We will add support for this later.
-	unless ( length $abn == 11 ) {
-		return $class->_error( "ABNs are 11 digits, not " . length $abn );
+	# An ABN with a "group number" attached is 14 digits.
+	my $group = '';
+	if ( length $abn == 14 ) {
+		($abn, $group) = /^(\d{11})(\d{3})$/ or die 'Regex unexpectedly failed';
+
+		# Group numbers are allocated sequentially, starting at 001.
+		# This means that 000 is not a legal group identifier.
+		if ( $group eq '000' ) {
+			return $class->_error( 'Cannot have the group identifier 000' );
+		}
+
+	} elsif ( length $abn != 11 ) {
+		return $class->_error( 'ABNs are 11 digits, not ' . length $abn );
 	}
 
 	# Split the 11 digit ABN into an 11 element array
@@ -78,19 +87,18 @@ sub _validate_abn {
 	$digits[0] -= 1;
 
 	# "Step 2. Multiply each of the digits in this new number by its weighting factor"
-	@digits = map { $digits[$_] * $_WEIGHT[$_] } (0 .. 10);
+	@digits = map { $digits[$_] * (WEIGHT)[$_] } (0 .. 10);
 
 	# "Step 3. Sum the resulting 11 products"
 	# "Step 4. Divide the total by 89, noting the remainder"
 	# "Step 5. If the remainder is zero the number is valid"
-	# We find the modulus, which does 4 and 5 in one go.
 	if ( List::Util::sum(@digits) % 89 ) {
 		return $class->_error( 'ABN looks correct, but fails checksum' );
 	}
 
 	# Format and return
 	$abn =~ s/^(\d{2})(\d{3})(\d{3})(\d{3})$/$1 $2 $3 $4/ or die "panic!";
-	$abn;
+	length($group) ? "$abn $group" : $abn;
 }
 
 # Get the ABN as a string
@@ -106,13 +114,13 @@ sub errstr { $errstr }
 #####################################################################
 # Utility Methods
 
-# Is a value a normal string of at least one non-whitespace character
+# Is a value a non-null non-whitespace string
 sub _string {
 	!! (defined $_[1] and ! ref $_[1] and length $_[1] and $_[1] =~ /\S/);
 }
 sub _error {
-	$errstr = $_[1] ? "$_[1]" : 'Unknown error while validating ABN';
-	return ''; # False
+	$errstr = (defined $_[1] and $_[1]) ? "$_[1]" : 'Unknown error while validating ABN';
+	''; # False
 }
 
 1;
@@ -153,36 +161,42 @@ confirm that the number is valid. ( Although the business may not actually
 exist ). The checksum algorithm was specifically designed to catch situations
 in which you get two digits the wrong way around, or something of that nature.
 
-Business::AU::ABN provides a validation/formatting mechanism, and an object
+C<Business::AU::ABN> provides a validation/formatting mechanism, and an object
 form of an ABN number. ABNs are reformatted into the most preferred format,
 '01 234 567 890'.
 
-The object itself automatically stringifies to the it's formatted number, so
-you can do things like C<print "Your ABN $ABN looks OK"> and other things of
-that nature.
+The object itself automatically stringifies to the formatted number, so with
+an object, you can safely do C<print "Your ABN $ABN looks OK"> and other
+things of that nature.
 
 =head2 Highly flexible validation
 
 Apart from the algorithm itself, most of this module is aimed at making the
 validation mechanism as flexible and easy to use as possible.
 
-With this in mind, the C<validate_abn> sub can be accessed in ANY form, and will
-just "do what you mean". See the method details for more information.
+With this in mind, the C<validate_abn> sub can be accessed in ANY form, and
+will just "do what you mean". See the method details for more information.
 
 Also, all validation will take just about any crap as an argument, and not die
 or throw a warning. It will just return false.
 
-=head2 "Group" ABNs as yet unsupported
+=head2 "Group" ABNs
 
-For some bizarre reason I've not yet managed to work out, there exists a
-SECOND type of ABN not documented in the ATO mod 89 document, known as a
-"group" ABN, and designed for one member of a group of companies. Frankly, I
-only found out this exists because my accountany has one, and I couldn't put
-the number into Quick Books.
+The ABN supports the concept of "Groups", that is, a group of companies
+sharing a common ABN, but being seperated within it. In fact, ALL companies
+that have a regular 11 digit ABN are actually also allocated a group number.
+This group number is a 3 digit number, and are allocated incrementally,
+starting with 001. So the ABN '01 234 567 890' is actually also capable of
+being represented as '01 234 567 890 001'.
 
-The Group ABN has an additional 3 numbers ( at the end I believe ). I have no
-idea how to validate it, and if anyone knows more, drop me an email at the 
-address provided below.
+By convention, when only a single company exists, the 001 is dropped.
+However, in common situations where an ABN value is expected, you accept
+both the 11 digit regular version, and the 14 digit group version. The 14
+digit case will also be reformatted to show the group identifier as an
+additional 3 digits group.
+
+Except for not allowing 000, there are no restrictions, and group
+identifiers are not included in the checksum calculation.
 
 =head1 METHODS
 
@@ -264,19 +278,17 @@ ABN, which is a superset of it.
 
 Bugs should be reported via the CPAN bug tracker at
 
-  http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Business%3A%3AAU%3A%3AABN
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Business-AU-ABN>
 
-For other issues, contact the author
+For other issues, or commercial enhancement or support, contact the author.
 
 =head1 AUTHORS
 
-        Adam Kennedy ( maintainer )
-        cpan@ali.as
-        http://ali.as/
+Adam Kennedy (Maintainer), L<http://ali.as/>, cpan@ali.as
 
 =head1 COPYRIGHT
 
-Copyright (c) 2003-2004 Adam Kennedy. All rights reserved.
+Copyright (c) 2003 - 2005 Adam Kennedy. All rights reserved.
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
@@ -284,5 +296,3 @@ The full text of the license can be found in the
 LICENSE file included with this module.
 
 =cut
-
-1;
