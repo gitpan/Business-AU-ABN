@@ -1,13 +1,19 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Business-AU-ABN
-version:      1.05
-version_from: lib/Business/AU/ABN.pm
-installdirs:  site
-requires:
-    File::Spec:                    0.8
-    List::Util:                    1.11
-    Test::More:                    0
-
+abstract: Validate and format Australian Business Numbers
+author: 'Adam Kennedy <cpan@ali.as>, L<http://ali.as/>'
+build_requires:
+  File::Spec: 0.80
+  Test::More: 0.47
 distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+generated_by: Module::Install version 0.62
+license: perl
+name: Business-AU-ABN
+no_index:
+  directory:
+    - inc
+    - t
+requires:
+  Exporter: 0
+  List::Util: 1.11
+  Params::Util: 0.10
+  perl: 5.005
+version: 1.06

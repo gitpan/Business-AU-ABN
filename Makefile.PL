@@ -1,17 +1,11 @@
-require 5.000;
-use ExtUtils::MakeMaker;
-WriteMakefile(
-	'NAME'         => 'Business::AU::ABN',
-	'VERSION_FROM' => 'lib/Business/AU/ABN.pm',
-	'PREREQ_PM'    => {
-		List::Util => 1.11,
+use inc::Module::Install;
 
-		# Modules needed for tests
-		File::Spec => 0.80,
-		Test::More => 0,
-	},
-	($] >= 5.005) ? (
-		'AUTHOR'   => 'Adam Kennedy <cpan@ali.as>',
-		'ABSTRACT' => 'Format and validate ABNs ( Australian Business Number )',
-	) : (),
-);
+name           'Business-AU-ABN';
+all_from       'lib/Business/AU/ABN.pm';
+requires       'Exporter'     => 0;
+requires       'List::Util'   => '1.11';
+requires       'Params::Util' => '0.10';
+build_requires 'File::Spec'   => '0.80';
+build_requires 'Test::More'   => '0.47';
+
+WriteAll;

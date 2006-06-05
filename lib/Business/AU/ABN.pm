@@ -5,21 +5,21 @@ package Business::AU::ABN;
 
 # See POD at the end of the file
 
-### Memory Overhead: 52K
-
+use 5.005;
 use strict;
-use UNIVERSAL 'isa';
 use base 'Exporter';
-use List::Util ();
-use overload '""'   => 'to_string',
-             'bool' => sub () { 1 };
+use List::Util   ();
+use Params::Util '_INSTANCE',
+                 '_CLASS';
+use overload     '""'   => 'to_string',
+                 'bool' => sub () { 1 };
 
 # The set of digit weightings, taken from the documentation.
 use constant WEIGHT => qw{10 1 3 5 7 9 11 13 15 17 19};
 
 use vars qw{$VERSION @EXPORT_OK $errstr};
 BEGIN {
-	$VERSION   = '1.05';
+	$VERSION   = '1.06';
 	@EXPORT_OK = 'validate_abn';
 	$errstr    = '';
 }
@@ -28,23 +28,33 @@ BEGIN {
 
 
 
+#####################################################################
+# Constructor
+
 sub new {
 	my $class = ref $_[0] || $_[0];
 
 	# Validate the string to create the object for
 	my $validated = $class->_validate_abn($_[1]) or return '';
 
-	bless \$validated, $class;
+	bless( \$validated, $class );
 }
 
 # The validate_abn method acts as a wrapper for the various call
 # forms around the true method _validate_abn.
 sub validate_abn {
-	isa( $_[0], 'Business::AU::ABN' )
-		? ref $_[0]
-			? shift->to_string            # Object method
-			: shift->_validate_abn(shift) # Class method
-		: __PACKAGE__->_validate_abn(shift);  # Function call
+	# Object method
+	if ( _INSTANCE( $_[0], 'Business::AU::ABN' ) ) {
+		return $_[0]->to_string;
+	}
+
+	# Class method
+	if ( _CLASS($_[0]) and $_[0]->isa('Business::AU::ABN') ) {
+		return $_[0]->_validate_abn($_[1]);
+	}
+
+	# Function call
+	__PACKAGE__->_validate_abn($_[0]);
 }
 
 # Do the ACTUAL check, called in class method context only.
@@ -284,7 +294,7 @@ For other issues, or commercial enhancement or support, contact the author.
 
 =head1 AUTHORS
 
-Adam Kennedy (Maintainer), L<http://ali.as/>, cpan@ali.as
+Adam Kennedy E<lt>cpan@ali.asE<gt>, L<http://ali.as/>
 
 =head1 COPYRIGHT
 
