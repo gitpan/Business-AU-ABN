@@ -1,19 +1,23 @@
+--- 
 abstract: Validate and format Australian Business Numbers
-author: 'Adam Kennedy <cpan@ali.as>, L<http://ali.as/>'
-build_requires:
+author: Adam Kennedy <cpan@ali.as>, L<http://ali.as/>
+build_requires: 
   File::Spec: 0.80
   Test::More: 0.47
 distribution_type: module
-generated_by: Module::Install version 0.62
+generated_by: Module::Install version 0.67
 license: perl
+meta-spec: 
+  url: http://module-build.sourceforge.net/META-spec-v1.3.html
+  version: 1.3
 name: Business-AU-ABN
-no_index:
-  directory:
+no_index: 
+  directory: 
     - inc
     - t
-requires:
+requires: 
   Exporter: 0
   List::Util: 1.11
   Params::Util: 0.10
   perl: 5.005
-version: 1.06
+version: 1.07
