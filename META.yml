@@ -3,10 +3,14 @@ abstract: 'Validate and format Australian Business Numbers'
 author:
   - 'Adam Kennedy <adamk@cpan.org>'
 build_requires:
+  ExtUtils::MakeMaker: 6.36
   File::Spec: 0.80
   Test::More: 0.47
+configure_requires:
+  ExtUtils::MakeMaker: 6.36
 distribution_type: module
-generated_by: 'Module::Install version 0.76'
+dynamic_config: 0
+generated_by: 'Module::Install version 1.04'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -17,13 +21,13 @@ no_index:
   directory:
     - inc
     - t
+    - xt
 requires:
-  Exporter: 0
   List::Util: 1.11
   Params::Util: 0.25
-  constant: 0
-  overload: 0
   perl: 5.005
 resources:
+  ChangeLog: http://fisheye2.atlassian.com/changelog/cpan/trunk/Business-AU-ABN
   license: http://dev.perl.org/licenses/
-version: 1.08
+  repository: http://svn.ali.as/cpan/trunk/Business-AU-ABN
+version: 1.09

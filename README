@@ -5,14 +5,14 @@ SYNOPSIS
       # Create a new validated ABN object
       use Business::AU::ABN;
       my $ABN = new Business::AU::ABN( '12 004 044 937' );
-  
-      # Validate in a single method call
+      
+  # Validate in a single method call
       Business::AU::ABN->validate_abn( '12 004 044 937' );
-  
-      # Validate in a single function call
+      
+  # Validate in a single function call
       Business::AU::ABN::validate_abn( '12 004 044 937' );
-  
-      # The validate_abn function is also importable
+      
+  # The validate_abn function is also importable
       use Business::AU::ABN 'validate_abn';
       validate_abn( '12 004 044 937' );
 
@@ -122,11 +122,11 @@ METHODS
 
       # Global variable
       $Business::AU::ABN::errstr
-  
-      # Class method
+      
+  # Class method
       Business::AU::ABN->errstr
-  
-      # Function
+      
+  # Function
       Business::AU::ABN::errstr()
 
 TO DO
@@ -148,7 +148,7 @@ SEE ALSO
     <http://ali.as/>
 
 COPYRIGHT
-    Copyright 2003 - 2008 Adam Kennedy.
+    Copyright 2003 - 2012 Adam Kennedy.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
